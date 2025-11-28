@@ -1,10 +1,15 @@
 ﻿using Executor.Logging;
+using System.Collections.Concurrent;
 using System.Threading.Channels;
 
 namespace Executor
 {
     public sealed class ChannelPipeline<T>
     {
+        public record PipelineError(Exception Exception, T? Item = default);
+
+        public ConcurrentBag<PipelineError> Errors = [];
+
         private readonly Channel<T> _channel;
         private readonly Task[] _workers;
         private readonly Func<T, Task> _handler;
@@ -62,16 +67,19 @@ namespace Executor
                             ex,
                             item
                         );
+                        Errors.Add(new(ex, item));
                     }
                 }
             }
-            catch (OperationCanceledException)
+            catch (OperationCanceledException ex)
             {
                 _logger?.LogWarning("ChannelPipeline worker loop canceled");
+                Errors.Add(new(Exception:ex));
             }
             catch (Exception ex)
             {
                 _logger?.LogError("Worker loop failed unexpectedly", ex);
+                Errors.Add(new(Exception: ex));
             }
         }
 
