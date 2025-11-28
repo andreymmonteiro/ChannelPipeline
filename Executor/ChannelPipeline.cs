@@ -103,6 +103,13 @@ namespace Executor
             _logger?.LogInfo("Completing ChannelPipeline writer");
             _channel.Writer.Complete();
         }
+
+        public async Task CompleteAndWaitAsync()
+        {
+            Complete();
+            _logger?.LogInfo("Waiting for ChannelPipeline completion");
+            await Completion;
+        }
     }
 }
 
